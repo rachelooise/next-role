@@ -6,10 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:auth": "node scripts/check-auth.mjs"
   },
   "dependencies": {
+    "@insforge/sdk": "1.5.2",
+    "@opentelemetry/api-logs": "^0.223.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.300.0",
+    "@opentelemetry/resources": "^3.0.0",
+    "@opentelemetry/sdk-logs": "^3.0.0",
     "next": "16.4.0",
+    "posthog-js": "^1.439.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
