@@ -24,6 +24,8 @@ export type CompanyResearch = {
   smartQuestions: string[];
   interviewPrep: string[];
   sources: string[];
+  researchBasis?: "website" | "job_profile";
+  limitations?: string;
 };
 
 export type Profile = {
@@ -91,6 +93,10 @@ export type Job = {
   missing_skills: string[];
   company_research: CompanyResearch | null;
   company_researched_at: string | null;
+  company_research_status: "idle" | "queued" | "running" | "completed" | "failed";
+  company_research_request_id: string | null;
+  company_research_run_id: string | null;
+  company_research_requested_at: string | null;
   found_at: string;
 };
 

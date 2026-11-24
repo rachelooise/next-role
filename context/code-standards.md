@@ -322,6 +322,12 @@ Approved dependencies for this project:
 - `@react-pdf/renderer` — Resume PDF generation
 - `pdf-parse` — Extract text from uploaded PDF
 - `zod` — Schema validation
+- `@trigger.dev/sdk` and `@trigger.dev/build` — Feature 13 background task execution and build support
+- `@browserbasehq/stagehand` 4.4.0 and `@browserbasehq/sdk` 2.25.0 — verified company website research
+- `tldts` — public suffix aware employer-domain comparison
+- `undici` — bounded server HTTP requests with public-address DNS checks at connection time
+- `@next/env` — explicit local environment loading for the worker CLI and verification scripts
+- `esbuild` (development only) — native worker and hydrated UI verification bundles
 - `lucide-react` — Icons
 - `tailwindcss` — Styling
 - `shadcn/ui` components — UI primitives

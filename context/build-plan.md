@@ -177,6 +177,8 @@ Build the complete Find Jobs page UI with mock data. No logic yet.
 
 ### 10 Adzuna Job Discovery
 
+Implemented and verified 2026-11-02. The approved context/job-discovery-design.md supersedes the older details below: explicit country dropdown replaces detection; Gemini Flash-Lite replaces GPT-4o; location remains optional. See context/job-discovery-verification.md. Feature 11 remains separate.
+
 Agent calls Adzuna API to find jobs matching user's search criteria, scores them against user profile, saves to DB.
 
 **Logic:**
@@ -241,6 +243,8 @@ Build the complete job details page UI. Job data from DB is already available fr
 ---
 
 # Feature 13 — Company Research Agent (Updated)
+
+Implementation update, 2026-11-05: the user approved Gemini, verified employer links instead of guessed domains, and a Trigger.dev background worker. The current design is in company-research-design.md. Code and migration are present; Trigger.dev account configuration and a complete live run are pending. The synchronous/GPT-4o examples below are historical guidance where they conflict with that design.
 
 Agent researches the company using their public website and builds a structured dossier using a single Browserbase session. Three data sources fused together: company website content, job description from DB, user profile from DB.
 
@@ -393,12 +397,14 @@ The Company Research card on the job details page must render all 9 fields:
 Build the complete dashboard UI with mock data.
 **UI:**
 
-- Four stat cards: Total Jobs Found, Avg. Match Rate, Companies Researched, Cover Letters Generated — all showing mock numbers with trend indicators
+- Four stat cards: Total Jobs Found, Avg. Match Rate, Companies Researched, Jobs This Week — mock values 284, 82%, 35 and 28; first two show trends, matching dashboard.png
 - Recent Activity card — list of 5 activity entries with colored dots and timestamps
-- Resume Tailoring Activity — bar chart (mock data, days of week)
+- Company Research Activity — blue bar chart (mock data, days of week)
 - Jobs Found Over Time — line chart (mock data, days of week)
 - Match Score Distribution — bar chart (mock data, score ranges 50-60%, 60-70%, 70-80%, 80-90%, 90-100%)
 - Incomplete profile banner at top if profile not complete
+
+Implemented from the user-approved reference plan on 2026-11-23. Uses existing NextRole navbar/branding and semantic tokens; responsive SVG charts keep axis labels at 12px without an added dependency. Mock data is explicitly disclosed. Only profile completion reads real owner-scoped data; statistics, activity and analytics remain Features 15–17. See dashboard-design.md and dashboard-verification.md.
 
 ---
 
@@ -412,6 +418,8 @@ Wire four stat cards to real InsForge DB data for current user.
 - Avg. Match Rate — AVG of match_score across all user jobs
 - Companies Researched — COUNT of jobs where company_research IS NOT NULL and user_id = current user
 - Jobs This Week — COUNT of jobs found in last 7 days
+
+Implemented 2026-11-23. Migration 202611230001_dashboard_stats adds a no-argument, security-invoker aggregate using auth.uid() and existing jobs RLS. Returns one snapshot over all owned jobs; company counts are per researched job, not distinct company names. The rolling window includes the lower boundary and excludes future timestamps. Average rounds to a whole percentage; empty average is shown as a dash, while empty counts are zero. Failures show dashes and a retry link, never sample stats. Mock trend indicators were removed; activity/charts remain explicitly labeled samples. See dashboard-stats-verification.md.
 
 ---
 
@@ -428,6 +436,8 @@ Wire recent activity list to real InsForge DB data for current user.
   - agent_run completed → "Found X jobs for [jobTitle] — [time ago]"
   - company_research populated → "Researched [company] — [time ago]"
 - Color coded dot per entry type — info blue, success green
+
+Implemented 2026-11-23. Fetch up to five completed runs and five researched jobs through parallel, explicit owner-filtered SDK queries, then merge/sort/limit to five overall. Sort by agent_runs.completed_at and jobs.company_researched_at (the actual event times; these tables have no generic created_at event column), with stable ID tie-breaking. Exclude failed/running searches, missing completion/research timestamps, missing dossiers and future events. Keep a previously saved dossier's event while a refresh fails or runs. One event per current job dossier; refresh moves that event rather than inventing historical rows. Errors have a retry link and never show mock entries. Only charts remain samples. See dashboard-activity-verification.md.
 
 ---
 

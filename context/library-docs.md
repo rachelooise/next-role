@@ -1,5 +1,31 @@
 # Library Docs
 
+## Feature 16 activity queries (2026-11-23)
+
+InsForge database SDK documentation was fetched through MCP. The activity loader uses client.database.from(...).select(...).eq("user_id", userId), then completion/dossier filters, timestamp upper bound, descending timestamp and id orders, and limit(5). agent_runs uses status=completed and completed_at; jobs uses non-null company_research and company_researched_at. .not(column, "is", null) is supported by the installed SDK and passed real backend checks. Both queries use the authenticated session, never an admin client. Merge after both successful results to preserve correct overall recency. No new database function or migration.
+
+## Feature 15 database aggregate (2026-11-23)
+
+InsForge instructions/database SDK docs were fetched through MCP. Use the existing session-bound client and client.database.rpc("dashboard_stats") with no arguments. The deployed PostgreSQL function returns one JSON object, not an array: totalJobs, averageMatchRate (null for no jobs), companiesResearched, jobsThisWeek. Validate before formatting. Aggregation executes as the authenticated caller, preserves jobs RLS and additionally filters auth.uid(); execution is revoked from PUBLIC and anon. No client-selected user ID or server admin credential. This avoids fetching all scores or using the latest-20 listing window for totals.
+
+## Feature 13 overrides, 2026-11-05
+
+The user approved Gemini synthesis, verified employer website links and Trigger.dev background execution. These rules supersede the older synchronous Browserbase/GPT-4o examples below for Feature 13 only. See company-research-design.md, company-research-setup.md and company-research-verification.md.
+
+- Exact runtime packages: @trigger.dev/sdk 4.8.3, @browserbasehq/stagehand 4.4.0, @browserbasehq/sdk 2.25.0, zod 4.6.6 (matches Stagehand), tldts 7.4.19 and undici 8.12.4. Development packages: @trigger.dev/build 4.8.3, esbuild 0.28.2 and @next/env 16.4.0. Keep the existing framework/Tailwind versions unchanged in this feature.
+- Stagehand v4 uses browserbase.launch and Stagehand.create, not new Stagehand/init. Structured extract takes instruction, Zod schema and options, and returns data. Both stagehand.close and browser.close are required in finally. Browserbase SDK timeout is named api_timeout, mapped by the SDK to the HTTP timeout field. Use 120 seconds, no retained context and no session recording/logging.
+- Import @browserbasehq/sdk/shims/node before Stagehand for this Node worker. Automatic transport selection failed cloud-session startup locally; the documented explicit Node transport worked. Stagehand's package assets must remain available, so its package and Browserbase SDK are externalized in trigger.config.ts.
+- Stagehand's documented client generate callback adapts the existing Gemini Flash-Lite client. Do not pass Gemini credentials into the browser configuration or use an implicit Model Gateway/provider fallback. Callback output is structured JSON and Stagehand validates it against its requested schema. Each extraction model call has a 20 second timeout and no automatic retries.
+- Dossier synthesis uses gemini-3.5-flash-lite, temperature 0.4, low reasoning, JSON mode, 4500 output tokens and a 45 second timeout per request. On HTTP 503 only, retry synthesis once after two seconds (approved 2026-11-16); SDK retries remain disabled and other failures are not retried. Validate all fields and ensure sources belong to actual extracted pages. Empty factual lists are allowed; advice sections remain useful. A website failure is labeled job/profile-only evidence. Model failure is a retryable failure, not a fabricated complete result.
+- Trigger task payloads contain only owner, job and request IDs. Conditional owned reservation plus idempotency keys deduplicate starts. Queue concurrency is one per environment, queue TTL one hour, task duration four minutes, and full task retries are disabled. Terminal status checks and an orphan deadline recover abandoned states. No fire-and-forget Next.js work or after callback is used.
+- Only the worker uses createAdminClient({baseUrl, apiKey}) with INSFORGE_API_KEY. Every query still filters its explicit owner and writes match the current request. Next.js routes continue to use the cookie-bound server client. Worker modules omit Next's server-only marker and are not part of a client import graph.
+- Server redirect resolution validates HTTPS URLs, ports, credentials and all redirect destinations. Undici's connection DNS lookup rejects nonpublic addresses, avoiding a separate validation/request lookup. Domain comparison uses tldts instead of taking the last two hostname labels. Browser navigation has an allowed-domain policy. Never guess company.com.
+- company_researched is emitted only after a successful current-request save. Optional PostHog failure is isolated. Saved profile and match data are unchanged.
+
+Official references checked: https://docs.stagehand.dev/v4/reference/stagehand, https://docs.stagehand.dev/v4/configuration/browser, https://docs.stagehand.dev/v4/configuration/models, https://docs.stagehand.dev/v4/reference/context, https://trigger.dev/docs/manual-setup, https://trigger.dev/docs/triggering and https://trigger.dev/docs/concurrency. Installed SDK types were checked; InsForge instructions and database docs were fetched through MCP.
+
+Live evidence: Browserbase direct and extension-backed sessions passed and were cleaned up. Stagehand extracted real verified company content. Gemini synthesis returned HTTP 503, so no complete live provider run is claimed. Trigger.dev account configuration/deployment and authenticated worker verification remain pending.
+
 Project-specific usage patterns for every third party library in this project. This file only covers how we use each library in this specific project — rules, patterns, and constraints specific to NextRole.
 
 Read the relevant section before implementing any feature that touches these libraries.
@@ -123,6 +149,16 @@ const url = data.publicUrl;
 ---
 
 ## Adzuna API
+
+### Feature 10 implementation, verified 2026-11-02
+
+- lib/adzuna.ts uses native server fetch with no-store, a 12 second timeout and safe response validation. Exactly one page, at most 10 results; category=it-jobs is mandatory. Omit where for blank location. Country is explicitly chosen from us/gb/au/ca (default us), superseding automatic detection in the older build plan.
+- Prefer ADZUNA_APP_ID and ADZUNA_APP_KEY; accept existing local AZUNA_API_ID and AZUNA_API_KEY as fallbacks. Never log credential-bearing request URLs or raw provider/SDK errors.
+- Adzuna description is only a snippet. Preserve it in about_role, keep unavailable structured fields empty, and do not infer employment type when provider fields are absent. contract_time and contract_type are distinct; preserve both if present. Salary formatting supports missing endpoints, currency codes USD/GBP/AUD/CAD, and both numeric/string salary_is_predicted flags. This supersedes the unsafe legacy salary/job-type mapping below.
+- Gemini gemini-3.5-flash-lite performs matching through the existing client. JSON output is validated; matched skills must exist in the saved skill list, missing skills must be absent. Professional facts and preferences only; omit contact details. Each model call has a 20 second timeout and no automatic retries. Three workers share a bounded scoring window.
+- Skip existing user/source/external IDs before scoring; the database unique constraint handles concurrent inserts. Never upsert a previously saved job. User queries and run updates are owner scoped. Per-listing failures retain successful saves; summary/run jobs_found counts newly saved rows. No schema migration.
+- POST /api/agent/find uses same-origin validation, bounded input, backend authentication and saved-profile readiness. proxy.ts refreshes this API session as well as protected pages. Client network mutations live in lib/job-discovery-client.ts; saved reads live in the server loader lib/jobs.ts.
+- Official sources checked: https://developer.adzuna.com/docs/search and https://developer.adzuna.com/overview . Live Australian search, Gemini scoring, owner persistence, duplicate preservation and session refresh passed. No real profile was sent to providers during verification.
 
 **Check first:** Check AGENTS.md for an installed Adzuna skill. If none exists — use this file and the official Adzuna API docs.
 
@@ -512,6 +548,10 @@ const result = JSON.parse(response.choices[0].message.content!);
 
 ## PostHog
 
+Feature 17: dashboard queries use the server-only Query API with POSTHOG_PERSONAL_API_KEY, POSTHOG_PROJECT_ID and POSTHOG_API_HOST. The Query Read key must never reach the browser. The dashboard filters events by the authenticated distinct ID, uses UTC calendar days and isolates chart failures. Live query and ingestion verification remain pending.
+
+Feature 10 server events (2026-11-02): lib/posthog-server.ts uses exact posthog-node 5.61.1 with the existing NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN/NEXT_PUBLIC_POSTHOG_HOST, flushAt=1, flushInterval=0, bounded requests and shutdown. Authenticated user ID supplies distinctId and userId. job_search_started includes title, location and country; job_found fires only for new saved rows with source and matchScore. Analytics failure is isolated from discovery. Tests verify capture/shutdown/error isolation; independent ingestion querying remains pending. Official Node SDK guidance: https://posthog.com/docs/libraries/node . The older NEXT_PUBLIC_POSTHOG_KEY example below is not the current configuration.
+
 Current browser integration (2026-10-27): initialized in root `instrumentation-client.ts`, before hydration, using `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` and `NEXT_PUBLIC_POSTHOG_HOST`. Existing legacy KEY examples below do not describe the current browser configuration. Navigation-bound captures pass `{ transport: "sendBeacon", send_instantly: true }` as the third argument. See `code-standards.md` for the implemented browser event contract. Server SDK setup remains pending.
 
 **Check first:** Check AGENTS.md for an installed PostHog skill. If a PostHog MCP server is configured — use it. The skill/MCP will have the latest client and server patterns.
@@ -656,3 +696,34 @@ export async function POST(req: NextRequest) {
 - `pdfData.text` is raw unformatted text — GPT-4o handles the structure extraction
 - Always handle parse errors — some PDFs are image-based and return empty text
 - If `pdfData.text` is empty or very short — return error to user: "Could not extract text from this PDF. Please try a different file."
+
+## Feature 07 library overrides — 2026-10-31
+
+- Direct OpenAI is authorized for resume extraction using the existing server-only OPENAI_API_KEY. No new key or OpenRouter configuration is required for this feature. Model remains gpt-4o; JSON mode is validated by lib/profile-extraction.ts. The extraction output budget is 3000 tokens rather than the older 800-token example, to accommodate up to three work roles and all profile fields. Client timeout 45 seconds, maxRetries 0, store:false.
+- Installed openai 7.47.0 requires Node 22+. The local runtime is Node 22.23.1. Keep deployment Node compatible.
+- Installed pdf-parse 2.4.5 uses PDFParse({data: Uint8Array}), getInfo(), getText() and destroy(); the earlier default-import/function example is obsolete. Server-only. Keep pdf-parse and @napi-rs/canvas in next.config.ts serverExternalPackages so worker resolution works in production. See the official parser troubleshooting guide linked in profile-extraction-verification.md.
+- Current Next.js Cache Components rejects an explicit runtime export in this route; leave the default Node runtime. maxDuration=60 is platform metadata; the model client has its own bounded timeout.
+
+## Gemini provider change — 2026-10-31
+
+User explicitly requested switching resume extraction to the Gemini key already present in .env.local. This supersedes Feature 07's earlier OpenAI/GPT-4o requirement only for extraction. lib/gemini.ts initializes the existing SDK with Google's documented OpenAI-compatible base URL and GEMINI_API_KEY; no OpenAI service call or fallback key is used. Missing GEMINI_API_KEY throws before SDK initialization. Other planned AI features have not been migrated.
+
+Current model: gemini-3.5-flash-lite, reasoning_effort low, JSON mode, max_tokens 3000, 45-second timeout, no automatic retries. The OpenAI-only store option is omitted; Google data-handling rules apply. The UI identifies Google Gemini. Quota/rate limits (429) and temporary overload (503) have separate readable feedback.
+
+Verification: 37 extraction checks and 48 save checks passed, including client endpoint/key/model configuration and overload/quota errors. Key validation via Google's model-list endpoint succeeded. Gemini 2.5 Flash appears in the list but its generation endpoint returns 404 saying it is unavailable to new users and recommending 3.8 Flash. Both 3.8 Flash via compatibility API and 3.1 Flash-Lite via compatibility/native APIs returned 503 UNAVAILABLE due to high demand; no successful live extraction is claimed. Stopped repeated requests after confirming the provider condition. A synthetic, database-free live check is available as npm run test:gemini:live. No real resumes or user profiles were accessed or changed by these diagnostics.
+
+Reference: https://ai.google.dev/gemini-api/docs/openai . This provider override supersedes the earlier direct OpenAI/model requirements for Feature 07. Do not route Gemini keys to OpenAI or fall back to OPENAI_API_KEY.
+
+- Availability follow-up: gemini-3.5-flash-lite is now the extraction model. A live synthetic PDF extraction passed after the previous 3.8 model timed out. Same Gemini endpoint/key, low reasoning, parser/validation, and explicit save behavior. Historical 503 notes above do not describe the latest successful check.
+
+- Resume extraction validation: Gemini may return printed LinkedIn/portfolio links without their protocol. lib/profile-extraction.ts adds HTTPS only to ordinary domain-style links before strict validation. Do not weaken shared profile-save URL validation. Use test:gemini:live -- --detailed for the realistic synthetic regression; never log model output or resume content.
+
+## Feature 08 generation overrides, 2026-10-31
+
+Generation uses the existing Gemini client and gemini-3.5-flash-lite, 0.3 temperature, 2200 output tokens, low reasoning and validated JSON. It never falls back to the OpenAI service. Model input contains only saved professional facts, not contact details, account metadata or job preferences. The renderer reads contact details directly from validated saved data.
+
+Installed exact @react-pdf/renderer 4.3.2. Use server renderToBuffer only, with embedded Noto Sans regular and bold from public/fonts, licensed under OFL. No font request at runtime. next.config.ts traces these fonts for the generation route. PDF font and point sizing are document specific and use the renderer's style API, not web CSS tokens. Default 11pt, retry 10pt; pdf-parse validates one page before persistence. Oversized content returns guidance without upload. No content is clipped to force a page.
+
+InsForge upload(key, Blob) replaces the canonical private object; no upsert option or public bucket. Save both the returned URL and canonical key, serve only through authenticated View Resume. Back up bytes and attempt restoration on database failure. The inherited cross-server canonical-key race is documented in resume-generation-review.md.
+
+Official references checked: https://react-pdf.org/docs/v4/node , https://react-pdf.org/docs/v4/advanced , https://ai.google.dev/gemini-api/docs/openai . Installed Next.js route handler, proxy and output tracing guides were read before implementation. InsForge storage and auth docs were fetched through MCP.

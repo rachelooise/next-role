@@ -1,6 +1,8 @@
 ﻿@import "tailwindcss";
 
 @theme {
+  --color-navigation: #4a5565;
+  --shadow-app-card: 0px 1px 3px rgb(0 0 0 / 0.1), 0px 1px 2px -1px rgb(0 0 0 / 0.1);
   /* Font */
   --font-sans: var(--font-inter), "Inter", sans-serif;
 
@@ -54,6 +56,7 @@
 
   /* Warning — orange */
   --color-warning: #ff8904;
+  --color-warning-dark: color-mix(in srgb, var(--color-warning) 65%, var(--color-text-primary));
   --color-warning-foreground: #ffffff;
 
   /* Error — red */
@@ -92,6 +95,20 @@
 }
 
 @layer components {
+  .app-page { @apply text-sm font-medium leading-5 text-text-primary; }
+  .app-heading { @apply text-base font-semibold leading-6 text-text-primary; }
+  .app-muted { @apply text-xs font-normal leading-4 text-text-muted; }
+  .app-card { @apply rounded-2xl border border-border bg-surface p-6 shadow-app-card; }
+  .app-input { @apply min-h-11 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium normal-case text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent disabled:bg-surface-muted; }
+  .app-primary { @apply inline-flex items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40; }
+  .app-secondary { @apply inline-flex items-center justify-center rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40; }
+  .profile-section { @apply my-8 border-t border-border pt-6; }
+  .profile-section legend { @apply float-left mb-6 w-full text-base font-semibold leading-6 text-text-primary; }
+  .profile-section > div { clear: both; }
+  .job-meter { width: 80px; height: 4px; appearance: none; background: var(--color-border); border-radius: 9999px; }
+  .job-meter::-webkit-meter-bar { background: var(--color-border); border: none; border-radius: 9999px; }
+  .job-meter::-webkit-meter-optimum-value { background: currentColor; border-radius: 9999px; }
+  .job-meter::-moz-meter-bar { background: currentColor; border-radius: 9999px; }
   .landing-frame {
     width: calc(100% - 40px);
     max-width: 1280px;

@@ -1,5 +1,17 @@
 # Architecture
 
+## Feature 16 dashboard activity (2026-11-23)
+
+app/dashboard/page.tsx authenticates, then loads statistics and activity concurrently. lib/dashboard-activity-server.ts uses the existing cookie-bound SDK to query agent_runs and jobs in parallel, each explicitly filtered by the authenticated user ID and protected by existing RLS. Each query returns at most five rows with only display fields, ordered by event timestamp and ID. No research JSON or profile/contact data enters the feed query result.
+
+lib/dashboard-activity.ts validates selected fields, formats relative times, merges both event types and selects the newest five. components/dashboard/RecentActivity.tsx is presentation only, using semantic time elements and stable prefixed row IDs. Feed errors do not replace statistics or charts. No schema, dependency, background polling or historical event table is added. Research history is the latest saved dossier timestamp per job, not an audit log.
+
+## Feature 15 dashboard statistics (2026-11-23)
+
+app/dashboard/page.tsx authenticates before calling the server-only lib/dashboard-stats-server.ts loader. Its cookie-bound InsForge SDK invokes public.dashboard_stats() with no owner argument. The security-invoker SQL function filters jobs.user_id = auth.uid() in addition to existing RLS, has an empty search_path, and grants execution only to authenticated. It computes the four aggregates in one snapshot without returning job rows or being limited by listing pagination. Migration: insforge/migrations/202611230001_dashboard_stats.sql. No admin SDK is used in the request path.
+
+lib/dashboard-stats.ts validates the response and formats serializable cards; components/dashboard remains presentation only. Request-time data stays behind Suspense and is not cached across users. Discovery invalidates /dashboard as well as /find-jobs. Existing profile banner handling stays independent; activity and charts remain fixtures until Features 16–17.
+
 ## Stack
 
 | Layer                          | Tool                     | Purpose                                          |
@@ -440,3 +452,23 @@ Rules the AI agent must never violate:
 - Always scope InsForge queries to the current user_id — never query without a user filter.
 - Adzuna API always includes category=it-jobs — never search without this filter.
 - jobs.source is always 'search'; URL imports are out of scope.
+
+## Feature 07 provider override
+
+Resume extraction uses Google Gemini (gemini-3.5-flash-lite) via lib/gemini.ts and server-only GEMINI_API_KEY, following the user's explicit provider-change request. Existing OpenAI SDK is used only as a compatible HTTP client for Google. Other planned AI operations retain their earlier design until separately implemented. See profile-extraction-verification.md for current external-service availability.
+
+## Feature 08 implementation
+
+Resume generation reuses Gemini gemini-3.5-flash-lite and the existing server credential as a recorded build assumption after the user requested implementation. This supersedes the older GPT-4o generation plan only for Feature 08. agent/resume-generator.ts produces validated content from saved professional facts. lib/resume-pdf.tsx owns the server PDF document and rendering utility, an explicit exception to the general no inline style rule for the PDF renderer's style API. lib/generated-resume.ts owns private storage replacement and optimistic profile reference updates, following Feature 06 recovery. No agent imports React, components or actions. The generate route orchestrates these helpers and validates the session and request. proxy.ts refreshes sessions on /api/resume/:path* while handlers retain final authorization.
+
+## Feature 10 implementation
+
+Approved 2026-11-02, recorded in context/job-discovery-design.md. Job matching now uses Gemini gemini-3.5-flash-lite on explicit user approval, superseding the older GPT-4o requirement for Feature 10. lib/adzuna.ts owns validated provider access; agent/matcher.ts owns matching; agent/adzuna.ts owns run lifecycle, duplicate checks and per-listing persistence. The API route authenticates and loads the saved profile before invoking discovery. lib/jobs.ts is a shared server data loader for the latest 20 owned rows; lib/job-discovery.ts owns shared pure validation/types. Components receive serialized rows and invoke network mutations through lib/job-discovery-client.ts, with no SDK/database imports. No background worker or schema migration. Explicit country selection replaces location-based inference. proxy.ts refreshes /api/agent/find sessions. Discovery server events use lib/posthog-server.ts and the existing configured project token. Feature 11 remains responsible for full database filtering, sorting and pagination.
+
+## Feature 13 implementation
+
+Approved 2026-11-05. Company research runs in Trigger.dev, with one task at a time per environment, rather than in a long Next.js request. The authenticated API reserves an owned job and dispatches identifier-only payloads. The worker claims the current request and uses an explicit owner filter on every admin SDK query. This background worker is an exception to the older rule that all agent work and server writes must use a cookie-bound Next.js client. No user session tokens are passed to the worker.
+
+agent/research.ts owns the worker lifecycle, company-browser.ts collects website evidence and research-synthesis.ts produces validated Gemini dossiers. lib/stagehand-gemini.ts adapts the existing Gemini Flash-Lite model through Stagehand's documented callback. Both browser and Stagehand handles are closed. lib/research-server.ts owns queue/status services, and lib/research-client.ts owns client network requests and polling. Components have no SDK/database imports. Worker-safe modules intentionally have no Next.js server-only marker and are imported only from the task graph.
+
+Migration 202611050001_company_research adds bookkeeping to jobs. Existing dossiers are preserved during refresh/failure. The UI restores saved results and status, and labels job/profile-only fallbacks. Setup and full live verification remain pending; see company-research-design.md and company-research-setup.md.
