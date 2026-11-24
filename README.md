@@ -11,6 +11,32 @@ NextRole is an AI-powered job search assistant that helps you discover relevant 
 - **Dashboard:** View saved-job statistics, recent activity, and PostHog analytics charts.
 - **Apply:** Open the original job listing in a new tab. NextRole does not submit applications on your behalf.
 
+## Screenshots
+
+### Dashboard
+
+An overview of job search activity and analytics. This screenshot uses sample data.
+
+![Dashboard with job statistics, recent activity, and analytics charts](screenshots/Dashboard.png)
+
+### Find jobs
+
+Search for roles and browse saved matches.
+
+![Job search results with match scores](screenshots/Search%20job%20in%20Perth.png)
+
+### Job details and match reasoning
+
+Review the match score, reasoning, and skills comparison for a saved role.
+
+![Job details with AI match reasoning and a skills comparison](screenshots/Job%20Detail.png)
+
+### Company research
+
+Explore a generated company briefing and interview preparation.
+
+![Company research briefing](screenshots/Company%20Research%204.png)
+
 ## Tech stack
 
 Next.js and TypeScript power the app. InsForge provides authentication, PostgreSQL, and file storage. Job discovery uses Adzuna and Google Gemini; company research uses Trigger.dev, Browserbase, Stagehand, and Gemini. PostHog provides event tracking and analytics. Resume PDFs are rendered with React PDF.
