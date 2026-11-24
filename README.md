@@ -4,7 +4,8 @@ NextRole is an AI-powered job search assistant that helps you discover relevant 
 
 ## Features
 
-- **Profile and resume:** Save your skills and experience, upload a PDF resume, extract profile details, and generate a resume from your profile.
+- **Resume generation:** Create a professional PDF resume from your saved profile. You can also upload an existing PDF and extract profile details from it.
+- **Profile:** Save your skills and experience to use for job matching and company research.
 - **Job discovery:** Search Adzuna for IT roles by title, location, and country. Gemini scores new jobs against your saved profile.
 - **Saved jobs:** Search by company or role, filter by match score, sort results, and browse saved jobs.
 - **Company research:** Generate a company briefing with website evidence and interview preparation. Research runs in a background worker.
@@ -18,6 +19,12 @@ NextRole is an AI-powered job search assistant that helps you discover relevant 
 An overview of job search activity and analytics. This screenshot uses sample data.
 
 ![Dashboard with job statistics, recent activity, and analytics charts](screenshots/Dashboard.png)
+
+### Generate a resume
+
+Turn your saved profile into a professional PDF resume.
+
+![Resume generation from a saved profile](screenshots/Generate%20Resume.png)
 
 ### Find jobs
 
