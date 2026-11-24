@@ -7,7 +7,7 @@ Update this file after every completed feature. Any AI agent reading this should
 ## Current Status
 
 **Phase:** Phase 5, Dashboard
-**Session status (2026-11-24):** Feature 17 charts are implemented but show “Analytics unavailable” in the authenticated dashboard. Direct PostHog queries using a synthetic user ID returned HTTP 200; the app-side cause is still unknown. Safe server-side diagnostics were added, and a dashboard reload is needed to capture the failure. Do not mark Feature 17 complete until the charts and user isolation are verified. A later user screenshot showed a successfully saved VGW research result. A previously queued research attempt expired while the local Trigger.dev worker was stopped; restarting it required bypassing the CLI version-range check even though installed packages matched 4.8.3. Worker readiness and hosted deployment remain unverified. The production build, scoped lint and TypeScript passed for Feature 17; the existing Next.js security advisory remains open.
+**Session status (2026-11-24):** The user confirmed that all three Feature 17 charts now display data in the authenticated dashboard. The earlier “Analytics unavailable” condition resolved, though its cause was not established. Direct PostHog queries using a synthetic user ID returned HTTP 200; independent cross-user isolation and exhaustive chart verification remain pending. A user screenshot showed a successfully saved VGW research result. A previously queued research attempt expired while the local Trigger.dev worker was stopped; restarting it required bypassing the CLI version-range check even though installed packages matched 4.8.3. Worker readiness and hosted deployment remain unverified. The production build, scoped lint and TypeScript passed for Feature 17; the existing Next.js security advisory remains open.
 **Last implemented:** 16 Recent Activity — Real Data (2026-11-23). The newest five completed searches and saved company research events now load through owner-filtered SDK queries, merge by completion/research timestamps and render with green/blue dots and relative times. Preserves the dashboard layout, adds distinct empty/error states, and labels only charts as sample data. Production build, TypeScript, scoped lint, local render/loader checks and 27 live SDK/HTTP checks passed. Temporary accounts and records were removed. Next planned: Feature 17 Analytics Charts — PostHog Data. See context/dashboard-activity-verification.md. Feature 15 remains complete.
 **In progress:** Feature 13 Company Research Agent is implemented with Gemini, verified website evidence, a Trigger.dev background task, durable status and a responsive dossier card grid matching the user's reference. Local credentials are configured and the development worker is registered and running. One user-triggered live run succeeded and the user confirmed the result; another company's synthesis failure was reproduced as Gemini HTTP 503. Added one synthesis-only retry after two seconds for HTTP 503, safe failure diagnostics and visible manual status-check feedback. Latest validation: 101 research checks, 20 hydrated mock-API browser checks, native worker registration, scoped lint, TypeScript and production build passed; desktop/mobile previews inspected. Earlier 33 job-details checks and 105 discovery regressions passed. Post-fix live retry recovery, the remaining live acceptance scenarios and hosted worker deployment remain pending. See company-research-design.md, company-research-setup.md and company-research-verification.md. Feature 11 remains reverted and pending. Inherited OAuth, extraction browser and independent analytics checks remain open.
 
@@ -33,19 +33,19 @@ Update this file after every completed feature. Any AI agent reading this should
 
 - [x] 09 Find Jobs Page — Full UI (sample data; authenticated visual verification pending)
 - [x] 10 Adzuna Job Discovery (105 local checks, 23 live authenticated checks, live browser search/reload and desktop/mobile screenshots; Gemini matching, country dropdown, owner deduplication and partial results)
-- [ ] 11 Filter + Sort + Pagination
+- [x] 11 Filter + Sort + Pagination (database-backed filters, sorting and 20-item pagination implemented; user confirmed case-insensitive text search works in the app; TypeScript, scoped lint and 105 discovery checks pass; live filter, sort and multi-page pagination verification remain pending)
 
 ### Phase 4 — Job Details Page
 
 - [x] 12 Job Details Page — Full UI (reference UI implemented; local checks and build passed; authenticated live verification pending)
-- [ ] 13 Company Research Agent (implemented; local Trigger.dev setup and one live run verified; reference card layout and bounded 503 retry added; remaining live acceptance checks and hosted deployment pending)
+- [x] 13 Company Research Agent (implemented; successful live research confirmed; reference card layout and bounded 503 retry added; remaining acceptance checks and hosted worker deployment pending)
 
 ### Phase 5 — Dashboard
 
 - [x] 14 Dashboard Page — Full UI (dashboard.png mock UI, owner-scoped profile banner, responsive SVG charts; production build, scoped lint, render checks and 1440px/390px static browser checks passed; authenticated profile-banner verification remains pending)
 - [x] 15 Stats Bar — Real Data (authenticated aggregate over all saved jobs, rolling 7-day count, empty/error states; local checks, build/lint and 31 live SDK/HTTP checks passed)
 - [x] 16 Recent Activity — Real Data (newest five owner-scoped completed searches/research saves; empty/error handling, relative times; build, lint, local checks and 27 live SDK/HTTP checks passed)
-- [ ] 17 Analytics Charts — PostHog Data (implemented; dashboard currently reports analytics unavailable; app-side cause, event ingestion and authenticated isolation verification pending)
+- [x] 17 Analytics Charts — PostHog Data (implemented; user confirmed all three charts display data; independent cross-user isolation and exhaustive chart verification pending)
 
 ---
 

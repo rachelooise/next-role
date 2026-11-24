@@ -371,3 +371,10 @@ Last updated: 2026-11-23
 
 Charts label their reporting periods and use separate empty and retry states. Daily charts use UTC dates; axes scale to event counts.
 
+### Saved job filters and pagination
+
+File: components/find-jobs/JobsExplorer.tsx
+Last updated: 2026-11-24
+
+Use `app-card`, `app-input`, `app-secondary` and `app-muted` for the saved-job search form and pagination; results and totals describe the filtered database collection. The search form has an explicit Search button, and pagination uses Previous and Next controls.
+

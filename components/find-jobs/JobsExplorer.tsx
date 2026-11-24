@@ -7,25 +7,24 @@ import { MATCH_THRESHOLD } from "@/lib/utils";
 import { COUNTRIES, parseJobSearch, type JobListing } from "@/lib/job-discovery";
 import { requestJobDiscovery } from "@/lib/job-discovery-client";
 import { JobsTable } from "@/components/find-jobs/JobsTable";
+import { JOB_PAGE_SIZE, type JobFilters } from "@/lib/job-filters";
 
-type Props = { jobs: JobListing[]; total: number; ready: boolean; error: string | null };
-const pageSize = 6;
+type Props = { jobs: JobListing[]; total: number; ready: boolean; error: string | null; filters: JobFilters };
 
-export function JobsExplorer({ jobs: savedJobs, total, ready, error }: Props): ReactElement {
+export function JobsExplorer({ jobs: savedJobs, total, ready, error, filters }: Props): ReactElement {
   const router = useRouter();
   const lock = useRef(false);
   const [refreshing, startRefresh] = useTransition();
   const [searching, setSearching] = useState(false);
-  const [query, setQuery] = useState("");
-  const [match, setMatch] = useState("all");
-  const [sort, setSort] = useState("score");
-  const [page, setPage] = useState(1);
   const [feedback, setFeedback] = useState<{ text: string; kind: "success" | "warning" | "error" } | null>(null);
   const busy = searching || refreshing;
-  const jobs = savedJobs.filter((job) => `${job.company} ${job.title}`.toLowerCase().includes(query.toLowerCase()) && (match === "all" || (match === "high" ? job.match_score >= MATCH_THRESHOLD : job.match_score < MATCH_THRESHOLD))).sort((a, b) => sort === "score" ? b.match_score - a.match_score : sort === "newest" ? Date.parse(b.found_at) - Date.parse(a.found_at) : Date.parse(a.found_at) - Date.parse(b.found_at));
-  const pages = Math.max(1, Math.ceil(jobs.length / pageSize));
-  const currentPage = Math.min(page, pages);
-  const visible = jobs.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const pages = Math.max(1, Math.ceil(total / JOB_PAGE_SIZE));
+  const currentPage = filters.page;
+  function navigate(changes: Partial<JobFilters>): void {
+    const next = { ...filters, ...changes };
+    const params = new URLSearchParams({ query: next.query, match: next.match, sort: next.sort, page: String(next.page) });
+    startRefresh(() => router.push(`/find-jobs?${params.toString()}`));
+  }
 
   async function search(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -37,7 +36,7 @@ export function JobsExplorer({ jobs: savedJobs, total, ready, error }: Props): R
     try {
       const result = await requestJobDiscovery(parseJobSearch({ jobTitle: form.get("jobTitle"), location: form.get("location"), country: form.get("country") }));
       setFeedback({ text: result.message, kind: result.warning ? "warning" : "success" });
-      setPage(1);
+      navigate({ page: 1 });
     } catch (failure) {
       setFeedback({ text: failure instanceof Error ? failure.message : "Could not complete the search. Reload before retrying.", kind: "error" });
     } finally {
@@ -66,20 +65,21 @@ export function JobsExplorer({ jobs: savedJobs, total, ready, error }: Props): R
     </section>
     <section aria-label="Saved job results" className="space-y-6">
       <div className="app-card space-y-3">
-        <div className="flex flex-wrap gap-3">
-          <label className="min-w-48 flex-1"><span className="sr-only">Filter by company or role</span><input className="app-input w-full" placeholder="Filter by company or role…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label>
-          <label><span className="sr-only">Match filter</span><select className="app-input" value={match} onChange={(event) => { setMatch(event.target.value); setPage(1); }}><option value="all">All Matches</option><option value="high">High Match</option><option value="low">Low Match</option></select></label>
-          <label><span className="sr-only">Sort jobs</span><select className="app-input" value={sort} onChange={(event) => { setSort(event.target.value); setPage(1); }}><option value="score">Match Score</option><option value="newest">Newest</option><option value="oldest">Oldest</option></select></label>
-        </div>
-        <p className="app-muted">{total > savedJobs.length ? `Browsing the latest ${savedJobs.length} of ${total} saved jobs. Filters apply to these loaded jobs.` : `${total} saved ${total === 1 ? "job" : "jobs"}. Strong matches score ${MATCH_THRESHOLD}% or higher.`}</p>
+        <form className="flex flex-wrap gap-3" onSubmit={(event) => { event.preventDefault(); navigate({ query: String(new FormData(event.currentTarget).get("query") ?? ""), page: 1 }); }}>
+          <label className="min-w-48 flex-1"><span className="sr-only">Filter by company or role</span><input key={filters.query} name="query" className="app-input w-full" placeholder="Filter by company or role…" defaultValue={filters.query} maxLength={100} /></label>
+          <button type="submit" className="app-secondary">Search</button>
+          <label><span className="sr-only">Match filter</span><select className="app-input" value={filters.match} onChange={(event) => navigate({ match: event.target.value as JobFilters["match"], page: 1 })}><option value="all">All Matches</option><option value="high">High Match</option><option value="low">Low Match</option></select></label>
+          <label><span className="sr-only">Sort jobs</span><select className="app-input" value={filters.sort} onChange={(event) => navigate({ sort: event.target.value as JobFilters["sort"], page: 1 })}><option value="score">Match Score</option><option value="newest">Newest</option><option value="oldest">Oldest</option></select></label>
+        </form>
+        <p className="app-muted">{total} matching {total === 1 ? "job" : "jobs"}. Strong matches score {MATCH_THRESHOLD}% or higher.</p>
       </div>
-      <JobsTable jobs={visible} emptyText={savedJobs.length ? "No jobs match these filters. Try another company or role, or choose All Matches." : "No saved jobs yet. Search above to find your first matches."} />
+      <JobsTable jobs={savedJobs} emptyText="No jobs match these filters. Try another company or role, or choose All Matches." />
       <div className="app-card flex flex-wrap items-center justify-between gap-4">
-        <p className="app-muted">Showing {jobs.length ? (currentPage - 1) * pageSize + 1 : 0} to {Math.min(currentPage * pageSize, jobs.length)} of {jobs.length} loaded results</p>
+        <p className="app-muted">Showing {savedJobs.length ? (currentPage - 1) * JOB_PAGE_SIZE + 1 : 0} to {savedJobs.length ? (currentPage - 1) * JOB_PAGE_SIZE + savedJobs.length : 0} of {total} results</p>
         <nav aria-label="Job results pagination" className="flex flex-wrap gap-2">
-          <button type="button" className="app-secondary" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</button>
-          {Array.from({ length: pages }, (_, index) => <button type="button" className={currentPage === index + 1 ? "app-primary" : "app-secondary"} aria-current={currentPage === index + 1 ? "page" : undefined} key={index} onClick={() => setPage(index + 1)}>{index + 1}</button>)}
-          <button type="button" className="app-secondary" disabled={currentPage === pages} onClick={() => setPage(currentPage + 1)}>Next</button>
+          <button type="button" className="app-secondary" disabled={currentPage === 1} onClick={() => navigate({ page: currentPage - 1 })}>Previous</button>
+          <span className="app-muted">Page {currentPage} of {pages}</span>
+          <button type="button" className="app-secondary" disabled={currentPage >= pages} onClick={() => navigate({ page: currentPage + 1 })}>Next</button>
         </nav>
       </div>
       <p className="app-muted"><a className="hover:text-accent focus-visible:outline-accent" href="https://www.adzuna.com" target="_blank" rel="noopener noreferrer">Jobs by Adzuna</a>. Scores are based on description snippets and your profile at discovery time.</p>
